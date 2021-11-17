@@ -1,5 +1,0 @@
-numpy
-pandas
-pandas-profiling
-pysurvival
-lifelines
