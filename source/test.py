@@ -1,51 +1,42 @@
 import config
 import load_data as ld
 import data_preprocessing as dp
+from pysurvival.utils import load_model
+from pysurvival.utils.metrics import concordance_index
 
-# ================================================
-# TESTING STEP - IMPORTANT TO VALIDATE THE MODEL
-
+# ===================================================================================
+# BEGINNING OF THE TESTING STEP - IMPORTANT TO VALIDATE THE MODEL
+# ===================================================================================
+# -----------------------------------------------------------------------------------
 # Loads the data
 # ==============
 testing = ld.load_data(config.TESTING,config.ID_VAR)
-
-# Reduces memory usage
-# ====================
-testing = dp.reduce_mem_usage(testing)
-
-# Deletes the duplicated rows
-# ===========================
-testing = dp.duplicated_data(testing)
-
-# Imputes variables with missing values (NaNs)
-# ============================================
-training = dp.data_imputer(training,config.EVENT)
-        
+# Imputes the missing values (NaNs)
+# =================================
+testing = dp.impute_test_data(testing,config.IMPUTED)
 # Label encoding of categorical variables
 # =======================================
-training = dp.categorical_encoding(training)
-
-# Saving preprocessed data
-# ========================
-ld.save_csv(training,config.PREPROCESSED)
-
-# Removing buggy variables
-# ========================
-training = training.drop('TotalCharges',axis=1)
-
-
+testing = dp.categorical_encoding(testing,config.CAT_VARS)
 # Normalization and scaling
 # =========================
-training = dp.standard_scaling(training,[config.TIMELINE, config.EVENT],config.SCALER)
+testing = dp.scaling_test_data(testing,config.FLOAT_VARS,config.SCALER)
+# -----------------------------------------------------------------------------------
+# ===================================================================================
+# END OF THE TESTING STEP - IMPORTANT TO VALIDATE THE MODEL
+# ===================================================================================
 
-# Reduces memory usage again
-# ==========================
-training = dp.reduce_mem_usage(training)
 
-# Outliers removal
-# ================
-#training = dp.outlier_detector(training)
-
-# Trains the survival model
-# =========================
-dp.conditional_survival_forest(training, config.TIMELINE, config.EVENT, config.MODEL)
+# ===================================================================================
+# Scoring the model
+# ===================================================================================
+# -----------------------------------------------------------------------------------
+model = load_model(config.MODEL)
+X_test = testing.drop([config.TIMELINE,config.EVENT],axis=1)
+T_test = testing[config.TIMELINE].values
+E_test = testing[config.EVENT].values
+C_index = concordance_index(model, X_test, T_test, E_test)
+print("The concordance index on the test subsample is of: ",round(C_index,2)*100,'%')
+# -----------------------------------------------------------------------------------
+# ===================================================================================
+# Scoring the model
+# ===================================================================================

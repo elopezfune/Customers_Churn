@@ -1,0 +1,7 @@
+2021-11-14 10:15:31 INFO     Data loaded correctly
+2021-11-14 10:15:31 INFO     NumExpr defaulting to 8 threads.
+2021-11-14 10:15:31 INFO     Missing values imputed
+2021-11-14 10:15:31 INFO     All categorical variables are encoded
+2021-11-14 10:15:31 INFO     All numerical variables are normalized and scaled
+2021-11-14 20:17:52 INFO     Model produced successfully
+2021-11-14 20:18:05 INFO     The C-index of the model is: 88.0%

@@ -1,50 +1,61 @@
-import config
+import config, logging
 import load_data as ld
 import data_preprocessing as dp
+import machine_learning_toolbox as ml
+from pysurvival.utils.metrics import concordance_index
 
-# ================================================
-# TRAINING STEP - IMPORTANT TO PERPETUATE THE MODEL
+# Creating a logging file
+logging.basicConfig(filename=config.SURV_LOGGING, level=logging.INFO, format='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
+# ===========================================================================================
+# BEGINNING OF THE TRAINING STEP - IMPORTANT TO PERPETUATE THE MODEL
+# ===========================================================================================
+# -------------------------------------------------------------------------------------------
 # Loads the data
 # ==============
 training = ld.load_data(config.TRAINING,config.ID_VAR)
+logging.info('Data loaded correctly')
 
-# Reduces memory usage
-# ====================
-training = dp.reduce_mem_usage(training)
+# Imputes the missing values (NaNs)
+# =================================
+training = dp.data_imputer(training,config.EVENT,config.IMPUTED)
+logging.info('Missing values imputed')
 
-# Deletes the duplicated rows
-# ===========================
-training = dp.duplicated_data(training)
-
-# Imputes variables with missing values (NaNs)
-# ============================================
-training = dp.data_imputer(training,config.EVENT)
-        
 # Label encoding of categorical variables
 # =======================================
-training = dp.categorical_encoding(training)
-
-# Saving preprocessed data
-# ========================
-ld.save_csv(training,config.PREPROCESSED)
-
-# Removing buggy variables
-# ========================
-training = training.drop('TotalCharges',axis=1)
+training = dp.categorical_encoding(training,config.CAT_VARS)
+logging.info('All categorical variables are encoded')
 
 # Normalization and scaling
 # =========================
-#training = dp.standard_scaling(training,[config.TIMELINE, config.EVENT],config.SCALER)
+training = dp.standard_scaling(training,config.FLOAT_VARS,config.SCALER)
+logging.info('All numerical variables are normalized and scaled')
+# -------------------------------------------------------------------------------------------
+# ===========================================================================================
+# END OF THE TRAINING STEP - IMPORTANT TO PERPETUATE THE MODEL
+# ===========================================================================================
 
-# Reduces memory usage again
-# ==========================
-training = dp.reduce_mem_usage(training)
 
-# Outliers removal
-# ================
-#training = dp.outlier_detector(training)
-
+# ===========================================================================================
+# BEGINNING OF THE MODEL PRODUCTION
+# ===========================================================================================
+# -------------------------------------------------------------------------------------------
 # Trains the survival model
 # =========================
-dp.conditional_survival_forest(training, config.TIMELINE, config.EVENT, config.MODEL)
+model = ml.conditional_survival_forest(training, config.TIMELINE, config.EVENT, config.MODEL)
+logging.info('Model produced successfully')
+# -------------------------------------------------------------------------------------------
+# ===========================================================================================
+# END OF THE MODEL PRODUCTION
+# ===========================================================================================
+
+
+# ===========================================================================================
+# Internal scoring of the model
+# ===========================================================================================
+# -------------------------------------------------------------------------------------------
+X_train = training.drop([config.TIMELINE,config.EVENT],axis=1)
+T_train = training[config.TIMELINE].values
+E_train = training[config.EVENT].values
+C_index = concordance_index(model, X_train, T_train, E_train)
+logging.info("The C-index of the model is: "+str(round(C_index,2)*100)+'%')
